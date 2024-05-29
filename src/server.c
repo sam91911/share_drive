@@ -85,7 +85,7 @@ int server_getid(uint64_t* id){
 			fclose(oper_file);
 			close(oper_fd);
 			if(id){
-				*id = strtoul(value, 0, 10);
+				*id = strtoul(value, 0, 16);
 			}
 			return 0;
 		}
@@ -164,6 +164,7 @@ int server_start(char* restrict password, int oper_msg, uint32_t flag){
 	pid_t client_pid[capacity];
 	uint64_t client_pid_len = 0;
 	uint8_t msg_buffer[1032];
+	uint8_t secret[32];
 	size_t msg_size;
 	int pid_state;
 	printf("\nstart listen\nipv4:\t%s\nport:\t%hd\nserverid:%016lx\n", ipv4, port, server_id);
@@ -197,16 +198,15 @@ int server_start(char* restrict password, int oper_msg, uint32_t flag){
 			}
 		}else{
 			uint64_t client_id;
-			if(server_login(server_id, client_sock, client_sockaddr, socket_buffer_size, &client_id, password) != 1){
+			if(server_login(server_id, client_sock, client_sockaddr, socket_buffer_size, &client_id, password, secret)){
 				shutdown(client_sock, SHUT_RDWR);
 				return 0;
 			}
-			/*
+			printf("login success\n");
 			if(server_process(server_id, client_sock, client_sockaddr, socket_buffer_size, client_id, password) != 1){
 				shutdown(client_sock, SHUT_RDWR);
 				return 0;
 			}
-			*/
 			shutdown(client_sock, SHUT_RDWR);
 			return 0;
 		}

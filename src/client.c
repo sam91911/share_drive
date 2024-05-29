@@ -80,6 +80,7 @@ int client_fpost(char* restrict password, uint64_t server_id, const char* restri
 	uint64_t sockaddr_len = 16;
 	uint64_t pubkey_len = 65;
 	uint8_t cnt = 0;
+	uint8_t secret[32];
 	int pid_state;
 	printf("\nstart ftrans\n");
 	if((oper_sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) client_err("socket");
@@ -135,7 +136,8 @@ int client_fpost(char* restrict password, uint64_t server_id, const char* restri
 			}
 			oper_sock = socket(AF_INET, SOCK_STREAM, 0);
 		}else{
-			if(client_login(server_id, oper_sock, socket_buffer_size, password, server_pubkey, pubkey_len)) return -1;
+			if(client_login(server_id, oper_sock, socket_buffer_size, password, secret, server_pubkey, pubkey_len)) return -1;
+			printf("login success\n");
 			shutdown(oper_sock, SHUT_RDWR);
 			return 0;
 		}

@@ -99,7 +99,8 @@ exit:
 			}
 			return 0;
 		}else if(!strcmp(instruction, "pubkey\n")){
-			if(pk_get_pubkey(buffer, 0));
+			size_buf[0] = 65;
+			if(pk_get_pubkey(buffer, size_buf));
 			printf("pubkey:\n");
 			for(uint8_t i = 0; i < 65; i++){
 				if(printf("%02X", buffer[i]) < 1) return -1;

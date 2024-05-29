@@ -10,7 +10,7 @@ int user_pubkey(uint64_t id, uint8_t* pubkey){
 	uint8_t buffer[32];
 	if(sprintf(buffer, "user/%016lX", id) < 0) return -1;
 	if(!(oper_file = fopen(buffer, "rb"))) return -1;
-	if(fread(pubkey, USER_PUBKEY_LEN, 1, oper_file) == 0) return -1;
+	if(fread(pubkey, USER_PUBKEY_LEN, 1, oper_file) < 1) return -1;
 	fclose(oper_file);
 	return 0;
 }
@@ -22,7 +22,7 @@ int user_checkid(uint64_t id){
 	int check_bool = 1;
 	while(!feof(oper_file)){
 		if(fread(buffer, 32, 1, oper_file) < 1) break;
-		if(*(uint64_t*)buffer = id){
+		if(*(uint64_t*)buffer == id){
 			check_bool = 0;
 			break;
 		}
@@ -81,7 +81,7 @@ int user_add(uint64_t serverid, uint8_t* restrict pubkey, uint64_t len){
 	if(write(oper_fd, buffer, 32) == -1) return -1;
 	close(oper_fd);
 	id =  *(uint64_t*)buffer;
-	if(sprintf(buffer, "user/user%016lX", id) < 0) return -1;
+	if(sprintf(buffer, "user/%016lX", id) < 0) return -1;
 	if((oper_fd = open(buffer, O_CREAT|O_WRONLY, 0644)) < 0) return -1;
 	if(write(oper_fd, pubkey, len) == -1) return -1;
 	close(oper_fd);

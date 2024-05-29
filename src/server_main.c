@@ -34,6 +34,7 @@ int main(const int argc, char** argv){
 	uint64_t server_id;
 	uint8_t init_flag = 0;
 	int pid_state;
+	uint64_t size_buf[4];
 	if((oper_msg = msgget(ipc_key, O_CREAT)) == -1) return -1;
 	for(int i = 1; i < argc; i++){
 		if(argv[i][0] == '-'){
@@ -126,20 +127,24 @@ exit:
 			}
 			return 0;
 		}else if(!strcmp(instruction, "pubkey\n")){
-			if(pk_get_pubkey(buffer, 0));
+			size_buf[0] = 65;
+			if(pk_get_pubkey(buffer, size_buf));
 			printf("pubkey:\n");
 			for(uint8_t i = 0; i < 65; i++){
 				if(printf("%02X", buffer[i]) < 1) return -1;
 			}
 			printf("\n");
 		}else if(!strcmp(instruction, "signreg\n")){
-			if(RAND_bytes(buffer, 32) != 1) return -1;
-			if(signreg_add(buffer, 0, 0)) return -1;
+			if(RAND_bytes(buffer, 32) != 1) continue;
+			if(signreg_add(buffer, 0, 0)) continue;
 			printf("copy the following code to your member:\n");
 			for(uint8_t i = 0; i < 32; i++){
 				printf("%02X", buffer[i]);
 			}
 			printf("\n");
+		}else if(!strcmp(instruction, "serverid\n")){
+			if(server_getid(size_buf)) continue;
+			printf("serverid:\n%016lX\n", size_buf[0]);
 		}else if(!memcmp(instruction, "signreg ", 8)){
 			if(strlen(instruction) < 139) continue;
 			brk = 0;

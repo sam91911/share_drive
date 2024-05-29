@@ -1,4 +1,4 @@
-all: server client sep merge tb_sha3 tb_pk
+all: server client
 server: server_main.o server.o login.o process.o user.o pk.o signreg.o
 	gcc $^ -o $@ -lcrypto
 client: client_main.o client.o pk.o serverid.o login.o user.o
