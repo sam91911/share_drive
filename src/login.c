@@ -67,10 +67,15 @@ int server_login(uint64_t server_id, int sock, struct sockaddr_in addr, uint64_t
 			EVP_DigestFinal(md_ctx, secret, 0);
 			EVP_MD_CTX_free(md_ctx);
 			if(send(sock, sbuffer, 28+(*(uint64_t*)(sbuffer+20)), 0) == -1) return -1;
+			if(client_id){
+				*client_id = user_id;
+			}
 			break;
 		case METHOD_REGISTER:
+			return -1;
 			break;
 		case METHOD_SIGNREG:
+			return -1;
 			break;
 		default:
 			return -1;

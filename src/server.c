@@ -62,6 +62,7 @@ int server_init(char* restrict password){
 	if(user_init()) server_err("user_init");
 	if(user_add(oper_serverid, oper_str, 65)) server_err("user_add");
 	if(signreg_init()) server_err("signreg init");
+	if(fsys_init()) server_err("fsys init");
 	return 0;
 }
 
@@ -143,7 +144,7 @@ int server_start(char* restrict password, int oper_msg, uint32_t flag){
 	}
 	if(flag&0x80000000){
 		printf("reuse\n");
-		if(setsockopt(main_sock, SOL_SOCKET, SO_REUSEADDR, &sock_opt, sizeof(int))) server_err("setsockopt");
+		if(setsockopt(main_sock, SOL_SOCKET, SO_REUSEADDR|SO_REUSEPORT, &sock_opt, sizeof(int))) server_err("setsockopt");
 	}
 	struct sockaddr_in main_sockaddr;
 	memset(&main_sockaddr, 0, sizeof(struct sockaddr_in));
@@ -202,8 +203,7 @@ int server_start(char* restrict password, int oper_msg, uint32_t flag){
 				shutdown(client_sock, SHUT_RDWR);
 				return 0;
 			}
-			printf("login success\n");
-			if(server_process(server_id, client_sock, client_sockaddr, socket_buffer_size, client_id, password) != 1){
+			if(server_process(server_id, client_sock, client_sockaddr, socket_buffer_size, client_id, password, secret) != 1){
 				shutdown(client_sock, SHUT_RDWR);
 				return 0;
 			}

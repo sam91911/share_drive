@@ -27,10 +27,11 @@ int client_init(char* restrict password){
 	close(oper_fd);
 	pk_init(password);
 	serverid_init();
+	fsys_init();
 	return 0;
 }
 
-int client_fpost(char* restrict password, uint64_t server_id, const char* restrict file_name){
+int client_fpost(char* restrict password, uint64_t server_id, char* restrict file_name, char* upname){
 	struct stat oper_stat;
 	int file_fd;
 	if(access(file_name, F_OK|R_OK)) client_err("access file_name");
@@ -137,7 +138,7 @@ int client_fpost(char* restrict password, uint64_t server_id, const char* restri
 			oper_sock = socket(AF_INET, SOCK_STREAM, 0);
 		}else{
 			if(client_login(server_id, oper_sock, socket_buffer_size, password, secret, server_pubkey, pubkey_len)) return -1;
-			printf("login success\n");
+			if(client_process_fpost(server_id, oper_sock, *(struct sockaddr_in*)oper_sockaddr, socket_buffer_size, password, secret, server_pubkey, pubkey_len, file_name, upname))
 			shutdown(oper_sock, SHUT_RDWR);
 			return 0;
 		}

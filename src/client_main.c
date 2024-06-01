@@ -15,6 +15,7 @@ int main(int argc, char** argv){
 	char password_str[256];
 	char instruction[1024];
 	uint8_t buffer[1024];
+	uint8_t buffer2[1024];
 	struct stat oper_stat;
 	struct termios oper_term, temp_term;
 	struct sockaddr_in oper_sockaddr;
@@ -71,6 +72,8 @@ int main(int argc, char** argv){
 			size_buf[0] = strlen(buffer)+7;
 			if(serverid_get_id(buffer, size_buf+1)) continue;
 			if(sscanf(instruction+size_buf[0], "%s", buffer) < 1) continue;
+			size_buf[0] += strlen(buffer)+1;
+			if(sscanf(instruction+size_buf[0], "%s", buffer2) < 1) continue;
 			if(client_pid){
 				if(!kill(client_pid, 0)){
 					if(!waitpid(client_pid, &pid_state, WNOHANG)){
@@ -88,7 +91,7 @@ int main(int argc, char** argv){
 			if(client_pid){
 				continue;
 			}else{
-				client_fpost(password, size_buf[1], buffer);
+				client_fpost(password, size_buf[1], buffer, buffer2);
 				return 0;
 			}
 		}else if(!strcmp(instruction, "exit\n")){

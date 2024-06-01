@@ -20,9 +20,11 @@
 #include "login.h"
 #include "pk.h"
 #include "serverid.h"
+#include "fsys.h"
+#include "process.h"
 
 void client_err(const char* restrict error_message);
 int client_init(char* restrict passward);
-int client_fpost(char* restrict passward, uint64_t server_id, const char* restrict file_name);
+int client_fpost(char* restrict passward, uint64_t server_id, char* restrict file_name, char* upname);
 
 #endif
