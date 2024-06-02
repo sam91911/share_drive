@@ -28,6 +28,7 @@ int client_init(char* restrict password){
 	pk_init(password);
 	serverid_init();
 	fsys_init();
+	temp_init();
 	return 0;
 }
 

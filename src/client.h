@@ -22,6 +22,7 @@
 #include "serverid.h"
 #include "fsys.h"
 #include "process.h"
+#include "temp.h"
 
 void client_err(const char* restrict error_message);
 int client_init(char* restrict passward);

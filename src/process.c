@@ -14,8 +14,7 @@ int server_process(uint64_t server_id, int sock, struct sockaddr_in addr, uint64
 	uint8_t derive_s[32];
 	uint64_t size_buf[4];
 	uint64_t tlen;
-	uint16_t slen;
-	uint16_t mlen;
+	uint8_t slen;
 	uint8_t oper_str[256];
 	uint8_t hash_r[32];
 	uint8_t hash_v[32];
@@ -38,26 +37,21 @@ int server_process(uint64_t server_id, int sock, struct sockaddr_in addr, uint64
 	pflag = buffer[3];
 	if(version != 0) return -1;
 	if(memcmp(buffer+4, &server_id, 8)) return -1;
-	//uint8_t recv_buf[buffer_size];
 	switch(method){
 		case METHOD_POST:
-			//setsockopt(sock, SOL_SOCKET, SO_RCVBUF, recv_buf, buffer_size);
 			if(pflag) return -1;
-			if(read_bytes < 56) return -1;
-			memcpy(hash_r, buffer+12, 32);
-			memcpy(&tlen, buffer+44, 8);
-			memcpy(&slen, buffer+52, 2);
-			memcpy(&mlen, buffer+54, 2);
-			if(read_bytes < 88+mlen*8+slen) return -1;
-			memcpy(size_buf, buffer+88+mlen*8+slen, 8);
-			if(pk_verify(remote_pubkey, 65, buffer+44, 44+mlen*8+slen, buffer+96+mlen*8+slen, size_buf[0]) != 1) return -1;
+			if(read_bytes < 166) return -1;
+			if(memcmp(&server_id, buffer+44, 8)) return -1;
+			slen = sbuffer[44+112];
+			if(read_bytes < 44+121+slen) return -1;
+			memcpy(size_buf, buffer+44+113+slen, 8);
+			if(pk_verify(remote_pubkey, 65, buffer+44, 113+slen, buffer+44+121+slen, size_buf[0]) != 1) return -1;
 			EVP_DigestInit(md_ctx, EVP_sha3_256());
 			EVP_DigestUpdate(md_ctx, derive_s, 32);
-			EVP_DigestUpdate(md_ctx, buffer+44, 52+mlen*8+slen+size_buf[0]);
+			EVP_DigestUpdate(md_ctx, buffer+44, 121+slen+size_buf[0]);
 			EVP_DigestFinal(md_ctx, hash_v, 0);
 			if(memcmp(hash_r, hash_v, 32)) return -1;
-			if(slen >= 256) return -1;
-			memcpy(oper_str, buffer+88, slen);
+			memcpy(oper_str, buffer+113, slen);
 			oper_str[slen] = '\0';
 			while(1){
 				rpt = 0;
@@ -181,5 +175,9 @@ int client_process_fpost(uint64_t server_id, int sock, struct sockaddr_in addr, 
 			pack_id++;
 		}
 	}
+	return 0;
+}
+
+int client_process_fget(uint64_t server_id, int sock, struct sockaddr_in addr, uint64_t buffer_size, char* restrict password, uint8_t* secret, uint8_t* restrict server_pubkey, uint64_t pubkey_len, char* file_name, char* upname){
 	return 0;
 }
