@@ -21,3 +21,5 @@ It's using the following c library:
 
 # the purpose
 It's designed to saving files to separate station.
+# It's not finish
+deadline is on 6/6. But maybe I will keep update after 6/6.  
