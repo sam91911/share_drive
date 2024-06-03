@@ -60,6 +60,7 @@ int server_init(char* restrict password){
 	if(pk_init(password)) return -1;
 	if(pk_get_pubkey(oper_str, &oper_str_len)) return -1;
 	if(user_init()) server_err("user_init");
+	if(user_server_init(oper_serverid)) server_err("fsys server init");
 	if(user_add(oper_serverid, oper_str, 65)) server_err("user_add");
 	if(signreg_init()) server_err("signreg init");
 	if(fsys_init()) server_err("fsys init");

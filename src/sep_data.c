@@ -39,7 +39,7 @@ int sep_data_sep(int ipipe, int opipe, uint64_t key, uint64_t threshold){
 				}
 				rbl += read_value;
 			}
-			memcpy(data+remain, rbuffer, threshold*8-remain);
+			memcpy(((uint8_t*)data)+remain, rbuffer, threshold*8-remain);
 			rpt = threshold*8-remain;
 		}else{
 			memcpy(data, rbuffer+rpt, threshold*8);
@@ -69,8 +69,8 @@ int sep_data_sep(int ipipe, int opipe, uint64_t key, uint64_t threshold){
 deal_remain:
 	memcpy(((uint8_t*)data)+remain, rbuffer, rbl);
 	memset(((uint8_t*)data)+remain+rbl, 0, (threshold*8-(remain+rbl)));
-	data[remain+rbl] |= 0x01;
-	data[threshold*8-1] |= 0x80;
+	*(((uint8_t*)data)+remain+rbl) |= 0x01;
+	*(((uint8_t*)data)+threshold*8-1) |= 0x80;
 	rt = data[0];
 	for(uint64_t i = 1; i < threshold; i++){
 		rt ^= GF64_mul(data[i], vector[i]);
@@ -196,26 +196,11 @@ int sep_data_merge(int* ipipes, int opipe, uint64_t* keys, uint64_t threshold){
 		wpt += threshold*8;
 	}
 deal_remain:
-	if(wpt+threshold*8 > SEP_BUFFER_SIZE){
-		while(1){
-			read_value = write(opipe, wbuffer, wpt);
-			if(read_value < 0){
-				if(errno == EAGAIN)
-					continue;
-				if(errno == EPIPE)
-					return 0;
-				return -1;
-			}
-			break;
-		}
-		wpt = 0;
-	}
-	if(!(rt[threshold*8-1] & 0x80)) return -1;
+	if(!(wbuffer[wpt-1]&0x80)) return -1;
 	for(pad = threshold*8-1; pad >= 0; pad--){
-		if(rt[pad]&0x01) break;
+		if(wbuffer[wpt-threshold*8+pad]&0x01) break;
 	}
-	memcpy(wbuffer+wpt, &rt, pad);
-	wpt += pad;
+	wpt += pad-threshold*8;
 	while(1){
 		read_value = write(opipe, wbuffer, wpt);
 		if(read_value < 0){

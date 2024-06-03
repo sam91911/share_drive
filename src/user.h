@@ -23,11 +23,13 @@
 #define USER_PUBKEY_LEN 65
 #endif
 
-int user_attr(uint64_t user_id, uint64_t attr);
-int user_pubkey(uint64_t id, uint8_t* pubkey);
-int user_checkid(uint64_t id);
+int user_pubkey(uint64_t serveid, uint64_t id, uint8_t* pubkey);
+int user_checkid(uint64_t serverid, uint64_t id);
 int user_check(uint64_t serverid, uint8_t* restrict pubkey, uint64_t len);
 int user_add(uint64_t serverid, uint8_t* restrict pubkey, uint64_t len);
 int user_init();
+int user_server_init(uint64_t serverid);
+int user_name2id(uint64_t server_id, char* name, uint64_t* id);
+int user_add_name(uint64_t server_id, const char* restrict name, uint64_t id);
 
 #endif

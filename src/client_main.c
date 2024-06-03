@@ -7,6 +7,7 @@
 #include <sys/wait.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <openssl/evp.h>
 
 
 int main(int argc, char** argv){
@@ -23,6 +24,7 @@ int main(int argc, char** argv){
 	pid_t client_pid = 0;
 	uint64_t size_buf[4];
 	int pid_state;
+	memset(instruction, 0, 1024);
 	for(int i = 1; i < argc; i++){
 		if(argv[i][0] == '-'){
 			switch(argv[i][1]){
@@ -67,6 +69,36 @@ int main(int argc, char** argv){
 		if(!fgets(instruction, 1024, stdin)) continue;
 		if(!strcmp(instruction, "init\n")){
 			client_init(password);
+		}else if(!memcmp(instruction, "fget ", 5)){
+			if(sscanf(instruction+5, "%s", buffer) < 1) continue;
+			size_buf[0] = strlen(buffer)+6;
+			if(serverid_get_id(buffer, size_buf+1)) continue;
+			if(sscanf(instruction+size_buf[0], "%s", buffer) < 1) continue;
+			size_buf[0] += strlen(buffer)+1;
+			if(user_name2id(size_buf[1], buffer, size_buf+2)) continue;
+			if(sscanf(instruction+size_buf[0], "%s", buffer) < 1) continue;
+			size_buf[0] += strlen(buffer)+1;
+			if(sscanf(instruction+size_buf[0], "%s", buffer2) < 1) continue;
+			if(client_pid){
+				if(!kill(client_pid, 0)){
+					if(!waitpid(client_pid, &pid_state, WNOHANG)){
+						if(printf("client has been started\n") < 0) return -1;
+						continue;
+					}
+				}else{
+					if(errno != ESRCH) return -1;
+					client_pid = 0;
+				}
+			}
+			if((client_pid = fork()) == -1){
+				return -1;
+			}
+			if(client_pid){
+				continue;
+			}else{
+				client_fget(password, size_buf[1], size_buf[2], buffer, buffer2);
+				return 0;
+			}
 		}else if(!memcmp(instruction, "fpost ", 6)){
 			if(sscanf(instruction+6, "%s", buffer) < 1) continue;
 			size_buf[0] = strlen(buffer)+7;
@@ -119,6 +151,7 @@ exit:
 			if(serverid_add(buffer, size_buf[0])){
 				printf("error with addServerid");
 			}
+			if(user_server_init(size_buf[0])) continue;
 		}else if(!memcmp(instruction, "addServer ", 10)){
 			if(sscanf(instruction+10, "%s", buffer) < 1) continue;
 			memset(&oper_sockaddr, 0, 16);
@@ -144,6 +177,24 @@ exit:
 			if(sscanf(instruction+size_buf[0], "%s", buffer+size_buf[1]) < 1) continue;
 			if(serverid_get_id(buffer+size_buf[1], size_buf+2)) continue;
 			if(serverid_add_server(size_buf[2], (uint8_t*)&oper_sockaddr, buffer, 16, size_buf[1], 0)) continue;
+		}else if(!memcmp(instruction, "addUserid ", 10)){
+			size_buf[0] = strtoul(instruction+10, 0, 16);
+			if(instruction[26] != ' '){
+				printf("usage:\naddServerid serverid name\n");
+				continue;
+			}
+			if(sscanf(instruction+27, "%s %s", buffer, buffer2) < 1) continue;
+			if(serverid_get_id(buffer2, size_buf+1)) continue;
+			if(user_add_name(size_buf[1], buffer, size_buf[0])){
+				printf("error with addServerid");
+			}
+		}else if(!memcmp(instruction, "id ", 3)){
+			if(sscanf(instruction+3, "%s", buffer) < 1) continue;
+			if(serverid_get_id(buffer, (uint64_t*) buffer2)) continue;
+			size_buf[0] = 1016;
+			if(pk_get_pubkey(buffer2+8, size_buf)) continue;
+			if(!EVP_Digest(buffer2, 8+size_buf[0], buffer, 0, EVP_sha3_256(), 0)) continue;
+			printf("Id:\n%016lX\n", *(uint64_t*)buffer);
 		}
 	}
 }

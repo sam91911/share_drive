@@ -17,15 +17,18 @@
 #include <sys/stat.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include "share_key.h"
 #include "login.h"
 #include "pk.h"
 #include "serverid.h"
 #include "fsys.h"
 #include "process.h"
 #include "temp.h"
+#include "user.h"
 
 void client_err(const char* restrict error_message);
 int client_init(char* restrict passward);
 int client_fpost(char* restrict passward, uint64_t server_id, char* restrict file_name, char* upname);
+int client_fget(char* restrict password, uint64_t server_id, uint64_t call_id, char* restrict file_name, char* upname);
 
 #endif

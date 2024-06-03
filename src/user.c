@@ -1,24 +1,21 @@
 #include "user.h"
 
-int user_attr(uint64_t user_id, uint64_t attr){
-	return 0;
-}
-
-int user_pubkey(uint64_t id, uint8_t* pubkey){
+int user_pubkey(uint64_t serverid, uint64_t id, uint8_t* pubkey){
 	if(!pubkey) return -2;
 	FILE* oper_file;
-	uint8_t buffer[32];
-	if(sprintf(buffer, "user/%016lX", id) < 0) return -1;
+	uint8_t buffer[64];
+	if(sprintf(buffer, "user/%016lX/%016lX", serverid, id) < 0) return -1;
 	if(!(oper_file = fopen(buffer, "rb"))) return -1;
 	if(fread(pubkey, USER_PUBKEY_LEN, 1, oper_file) < 1) return -1;
 	fclose(oper_file);
 	return 0;
 }
 
-int user_checkid(uint64_t id){
+int user_checkid(uint64_t serverid, uint64_t id){
 	FILE* oper_file;
-	if(!(oper_file = fopen("user/user_list", "rb"))) return -1;
-	uint8_t buffer[32];
+	uint8_t buffer[64];
+	if(sprintf(buffer, "user/%016lX/user_list", serverid) < 0) return -1;
+	if(!(oper_file = fopen(buffer, "rb"))) return -1;
 	int check_bool = 1;
 	while(!feof(oper_file)){
 		if(fread(buffer, 32, 1, oper_file) < 1) break;
@@ -33,8 +30,9 @@ int user_checkid(uint64_t id){
 
 int user_check(uint64_t serverid, uint8_t* restrict pubkey, uint64_t len){
 	FILE* oper_file;
-	if(!(oper_file = fopen("user/user_list", "rb"))) return -1;
-	uint8_t buffer[32];
+	uint8_t buffer[64];
+	if(sprintf(buffer, "user/%016lX/user_list", serverid) < 0) return -1;
+	if(!(oper_file = fopen("user/%016lX/user_list", "rb"))) return -1;
 	uint8_t hash_value[32];
 	uint8_t pubkey_buffer[len];
 	int check_bool = 1;
@@ -66,22 +64,23 @@ int user_add(uint64_t serverid, uint8_t* restrict pubkey, uint64_t len){
 	if(!pubkey) return 0;
 	if(!user_check(serverid, pubkey, len)) return 0;
 	int oper_fd;
-	uint8_t buffer[32];
+	uint8_t buffer[64];
 	uint64_t id;
 	EVP_MD_CTX* md_ctx;
 	if(!(md_ctx = EVP_MD_CTX_new())) return -1;
+	if(sprintf(buffer, "user/%016lX/user_list", serverid) < 0) return -1;
+	if((oper_fd = open(buffer, O_WRONLY)) == -1) return -1;
 	EVP_DigestInit(md_ctx, EVP_sha3_256());
 	EVP_DigestUpdate(md_ctx, &serverid, 8);
 	EVP_DigestUpdate(md_ctx, pubkey, len);
 	EVP_DigestFinal(md_ctx, buffer, 0);
 	EVP_MD_CTX_free(md_ctx);
 	memset(buffer+8, 0, 24);
-	if((oper_fd = open("user/user_list", O_WRONLY)) == -1) return -1;
 	if(lseek(oper_fd, 0, SEEK_END) == -1) return -1;
 	if(write(oper_fd, buffer, 32) == -1) return -1;
 	close(oper_fd);
 	id =  *(uint64_t*)buffer;
-	if(sprintf(buffer, "user/%016lX", id) < 0) return -1;
+	if(sprintf(buffer, "user/%016lX/%016lX", serverid, id) < 0) return -1;
 	if((oper_fd = open(buffer, O_CREAT|O_WRONLY, 0644)) < 0) return -1;
 	if(write(oper_fd, pubkey, len) == -1) return -1;
 	close(oper_fd);
@@ -105,9 +104,113 @@ int user_init(){
 	if(!(S_IFDIR&(oper_stat.st_mode))){
 		return -1;
 	}
-	if((oper_fd = open("user/user_list", O_CREAT|O_WRONLY, 0644)) < 0){
+	close(oper_fd);
+	return 0;
+}
+int user_server_init(uint64_t serverid){
+	struct stat oper_stat;
+	int oper_fd;
+	char buffer[64];
+	if(access("user", F_OK)){
+		return -1;
+	}
+	if(stat("user", &oper_stat)){
+		return -1;
+	}
+	if(!(S_IFDIR&(oper_stat.st_mode))){
+		return -1;
+	}
+	if(sprintf(buffer, "user/%016lX", serverid) < 0) return -1;
+	if(access(buffer, F_OK)){
+		if(errno == ENOENT){
+			if(mkdir(buffer, 0744)){
+				return -1;
+			}
+		}else{
+			return -1;
+		}
+	}
+	if(stat(buffer, &oper_stat)){
+		return -1;
+	}
+	if(!(S_IFDIR&(oper_stat.st_mode))){
+		return -1;
+	}
+	if(sprintf(buffer, "user/%016lX/user_list", serverid) < 0) return -1;
+	if((oper_fd = open(buffer, O_CREAT|O_WRONLY, 0644)) < 0){
+		return -1;
+	}
+	if(sprintf(buffer, "user/%016lX/list", serverid) < 0) return -1;
+	if((oper_fd = open(buffer, O_CREAT|O_WRONLY, 0644)) < 0){
 		return -1;
 	}
 	close(oper_fd);
+	return 0;
+}
+
+int user_name2id(uint64_t serverid, char* name, uint64_t* id){
+	if(!name) return -1;
+	if(!id) return -1;
+	struct stat oper_stat;
+	FILE* oper_file;
+	uint64_t oper_id;
+	char buffer[64];
+	if(access("user", F_OK)){
+		return -1;
+	}
+	if(stat("user", &oper_stat)){
+		return -1;
+	}
+	if(!(S_IFDIR&(oper_stat.st_mode))){
+		return -1;
+	}
+	if(sprintf(buffer, "user/%016lX", serverid) < 0) return -1;
+	if(access(buffer, F_OK)){
+		return -1;
+	}
+	if(sprintf(buffer, "user/%016lX/list", serverid) < 0) return -1;
+	if(!(oper_file = fopen(buffer, "r"))){
+		return -1;
+	}
+	while(!feof(oper_file)){
+		if(fscanf(oper_file, "%16lX %s\n", &oper_id, buffer) <= 0) break;
+		if(!strcmp(name, buffer)){
+			*id = oper_id;
+			fclose(oper_file);
+			return 0;
+		}
+	}
+	fclose(oper_file);
+	return 1;
+}
+
+int user_add_name(uint64_t serverid, const char* restrict name, uint64_t id){
+	if(!name) return -1;
+	if(access("serverid", F_OK)){
+		return -1;
+	}
+	struct stat oper_stat;
+	FILE* oper_file;
+	int oper_fd;
+	uint8_t buffer[64];
+	if(access("user", F_OK)){
+		return -1;
+	}
+	if(stat("user", &oper_stat)){
+		return -1;
+	}
+	if(!(S_IFDIR&(oper_stat.st_mode))){
+		return -1;
+	}
+	if(sprintf(buffer, "user/%016lX", serverid) < 0) return -1;
+	if(access(buffer, F_OK)){
+		return -1;
+	}
+	if(sprintf(buffer, "user/%016lX/list", serverid) < 0) return -1;
+	if(!(oper_file = fopen(buffer, "a"))){
+		return -1;
+	}
+	if(fprintf(oper_file, "%016lX %s\n", id, name) == -1) return -1;
+	fclose(oper_file);
 	return 0;
 }

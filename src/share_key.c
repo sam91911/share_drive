@@ -3,8 +3,8 @@
 int share_key_gen(uint64_t key, uint64_t threshold, uint64_t* coef){
 	if(!coef) return -1;
 	coef[threshold-1] = key;
-	if(RAND_bytes((uint8_t*)coef, (threshold-1)*8)) return -3;
-	return -1;
+	if(RAND_bytes((uint8_t*)coef, (threshold-1)*8) != 1) return -3;
+	return 0;
 }
 
 int share_key_gen_ex(uint64_t key, uint64_t threshold, uint64_t base_n, uint64_t* base_x, uint64_t* coef){
@@ -12,7 +12,7 @@ int share_key_gen_ex(uint64_t key, uint64_t threshold, uint64_t base_n, uint64_t
 	if(base_n+1 >= threshold) return -1;
 	uint64_t target[base_n];
 	uint64_t rd[threshold-base_n+1];
-	memset(target, 0, support_n*sizeof(uint64_t));
+	memset(target, 0, base_n*sizeof(uint64_t));
 	target[0] = base_x[0];
 	for(uint64_t i = 1; i < base_n; i++){
 		for(uint64_t j = base_n-i-1; j < base_n; j++){
@@ -20,7 +20,7 @@ int share_key_gen_ex(uint64_t key, uint64_t threshold, uint64_t base_n, uint64_t
 		}
 		target[0] ^= base_x[i];
 	}
-	if(RAND_bytes((uint8_t*)rd, (threshold-base_n+1)*8)) return -3;
+	if(RAND_bytes((uint8_t*)rd, (threshold-base_n+1)*8) != 1) return -3;
 	for(uint64_t i = 1; i <= threshold-base_n; i++){
 		coef[i-1] ^= rd[i];
 		for(uint64_t j = 0; j < base_n; j++){
@@ -28,17 +28,16 @@ int share_key_gen_ex(uint64_t key, uint64_t threshold, uint64_t base_n, uint64_t
 		}
 	}
 	coef[threshold-1] ^= key;
-	return -1;
+	return 0;
 }
 
-int share_key_plug(uint64_t key, uint64_t threshold, uint64_t* coef, uint64_t sample_x, uint64_t* r_sample_y){
+int share_key_plug(uint64_t threshold, uint64_t* coef, uint64_t sample_x, uint64_t* r_sample_y){
 	if(!r_sample_y) return -1;
 	if(!coef) return 0;
 	r_sample_y[0] = GF64_mul(coef[0], sample_x);
 	for(uint64_t j = 1; j < threshold-1; j++){
 		r_sample_y[0] = GF64_mul(r_sample_y[0]^coef[j], sample_x);
 	}
-	r_sample_y[0] ^= key;
 	return 0;
 }
 

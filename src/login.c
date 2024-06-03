@@ -33,7 +33,7 @@ int server_login(uint64_t server_id, int sock, struct sockaddr_in addr, uint64_t
 			if(pack_id != 0) return -1;
 			if(read_bytes < 20) return -1;
 			user_id = (*(uint64_t*)(buffer+12));
-			if(user_checkid(user_id)) return -2;
+			if(user_checkid(server_id, user_id)) return -2;
 			(*(uint64_t*)(oper_str+0)) = server_id;
 			oper_str_len = 65;
 			if(pk_get_pubkey(oper_str+8, &oper_str_len)) return -1;
@@ -57,7 +57,7 @@ int server_login(uint64_t server_id, int sock, struct sockaddr_in addr, uint64_t
 			if(*(uint64_t*)(buffer+12) != user_id) return -1;
 			memcpy(size_buf, buffer+20, 8);
 			oper_str_len = 65;
-			if(user_pubkey(user_id, oper_str)) return -1;
+			if(user_pubkey(server_id, user_id, oper_str)) return -1;
 			if(pk_verify(oper_str, 65, sbuffer, 60, buffer+44, size_buf[0]) != 1) return -1;
 			EVP_DigestUpdate(md_ctx, buffer, 44+size_buf[0]);
 			(*(uint8_t*)(sbuffer+3)) = 3;
