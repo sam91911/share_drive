@@ -200,14 +200,14 @@ int server_start(char* restrict password, int oper_msg, uint32_t flag){
 			uint64_t client_id;
 			if(server_login(server_id, client_sock, client_sockaddr, socket_buffer_size, &client_id, password, secret)){
 				shutdown(client_sock, SHUT_RDWR);
-				return 0;
+				exit(0);
 			}
 			if(server_process(server_id, client_sock, client_sockaddr, socket_buffer_size, client_id, password, secret)){
 				shutdown(client_sock, SHUT_RDWR);
-				return 0;
+				exit(0);
 			}
 			shutdown(client_sock, SHUT_RDWR);
-			return 0;
+			exit(0);
 		}
 	}
 	return 0;

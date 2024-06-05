@@ -134,15 +134,15 @@ int log_hash_nullGet(uint64_t serverid, uint8_t* hash){
 		for(; i < 32; i++){
 			if(buffer[i] != 0xff) break;
 		}
+		if(i == 32){
+			i = -1;
+			break;
+		}
 		for(; j < 8; j++){
 			if(!(buffer[i]&(1<<j))){
 				i = i*8+j;
 				break;
 			}
-		}
-		if(i == 32){
-			i = -1;
-			break;
 		}
 		if(!hash) break;
 		if(lseek(oper_fd, 8192-32+i*32, SEEK_SET) == -1){
@@ -356,12 +356,15 @@ int log_pack(uint64_t serverid){
 	}
 	close(oper_fd);
 	if(sprintf(path, "log/%016lX/%016lX", serverid, pack) < 1) return -1;
-	if((oper_fd = open(path, O_RDONLY)) == -1) return -1;
-	if(read(oper_fd, hash_r, 32) == -1){
+	if((oper_fd = open(path, O_RDONLY)) == -1){
+		memset(hash_r, 0, 32);
+	}else{
+		if(read(oper_fd, hash_r, 32) == -1){
+			close(oper_fd);
+			return -1;
+		}
 		close(oper_fd);
-		return -1;
 	}
-	close(oper_fd);
 	if(sprintf(path, "log/%016lX/%016lX", serverid, pack) < 1) return -1;
 	pack += 1;
 	if((oper_fd = open(path, O_CREAT|O_WRONLY|O_TRUNC, 0644)) == -1) return -1;
