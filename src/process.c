@@ -531,8 +531,14 @@ int client_process_update(uint64_t server_id, uint64_t server_userid, int sock, 
 						log_add_content(server_id, size_buf[0], oper_str, log_id);
 						break;
 					case METHOD_SIGNREG:
+						memcpy(size_buf, buffer+85, 8);
+						if(user_add(server_id, buffer+93, size_buf[0])) break;
 						break;
 					case METHOD_CLONE:
+						memcpy(size_buf, buffer+69, 8);
+						memcpy(size_buf+1, buffer+85, 8);
+						if(user_pubkey(server_id, size_buf[0], sbuffer)) continue;
+						if(serverid_add_server(server_id, buffer+93, sbuffer, 16, 65, 0)) continue;
 						break;
 				}
 				break;
@@ -542,9 +548,5 @@ int client_process_update(uint64_t server_id, uint64_t server_userid, int sock, 
 	}
 	log_hash_reset(server_id, log_pack_m+1);
 	close(oper_fd);
-	return 0;
-}
-
-int client_process_clone(uint64_t server_id, uint64_t server_userid, int sock, struct sockaddr_in addr, uint64_t buffer_size, char* restrict password, uint8_t* secret, uint8_t* restrict server_pubkey, uint64_t pubkey_len, uint64_t client_id, char* path, struct sockaddr_in sv_addr){
 	return 0;
 }

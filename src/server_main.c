@@ -1,6 +1,7 @@
 #include "server.h"
 #include "method.h"
 #include "signreg.h"
+#include "client.h"
 #include <stdio.h>
 #include <string.h>
 #include <termios.h>
@@ -83,7 +84,7 @@ int main(const int argc, char** argv){
 	if(pk_termin(password, 256)) return 0;
 	if(server_getid(&server_id)){
 		if(init_flag){
-			server_init(password);
+			server_init(password, 0);
 		}else{
 			printf("server do not init\nplease init first\n");
 		}
@@ -96,7 +97,7 @@ int main(const int argc, char** argv){
 		}
 		if(!fgets(instruction, INSTRUCT_LEN, stdin)) continue;
 		if(!strcmp(instruction, "init\n")){
-			server_init(password);
+			server_init(password, 0);
 			server_getid(&server_id);
 			continue;
 		}else if(!strcmp(instruction, "start\n")){
@@ -157,6 +158,8 @@ exit:
 			}
 			if(brk) continue;
 			if(user_add(server_id, buffer, 65)) return -1;
+		}else if(!memcmp(instruction, "update\n", 7)){
+			if(client_update(password, server_id)) continue;
 		}
 	}
 }

@@ -1,4 +1,5 @@
 #include "client.h"
+#include "server.h"
 #include <stdio.h>
 #include <string.h>
 #include <termios.h>
@@ -24,6 +25,7 @@ int main(int argc, char** argv){
 	pid_t client_pid = 0;
 	uint64_t size_buf[4];
 	int pid_state;
+	int oper_fd, src_fd;
 	memset(instruction, 0, 1024);
 	for(int i = 1; i < argc; i++){
 		if(argv[i][0] == '-'){
@@ -201,6 +203,139 @@ exit:
 			if(sscanf(instruction+7, "%s", buffer) < 1) continue;
 			if(serverid_get_id(buffer, size_buf)) continue;
 			if(client_update(password, size_buf[0])) continue;
+		}else if(!memcmp(instruction, "clone ", 6)){
+			if(sscanf(instruction+6, "%s", buffer) < 1) continue;
+			memset(&oper_sockaddr, 0, 16);
+			if((oper_sockaddr.sin_addr.s_addr = inet_addr(buffer)) == -1) continue;
+			oper_sockaddr.sin_family = AF_INET;
+			size_buf[0] = strlen(buffer)+7;
+			if(sscanf(instruction+size_buf[0], "%s", buffer) < 1) continue;
+			size_buf[0] += strlen(buffer)+1;
+			oper_sockaddr.sin_port = strtoul(buffer, 0, 10);
+			oper_sockaddr.sin_port = htons(oper_sockaddr.sin_port);
+			if(sscanf(instruction+size_buf[0], "%s", buffer) < 1) continue;
+			if(serverid_get_id(buffer, size_buf+2)) continue;
+			size_buf[0] += strlen(buffer)+1;
+			if(sscanf(instruction+size_buf[0], "%s", buffer) < 1) continue;
+			size_buf[1] = strlen(buffer);
+			if(size_buf[1] > 255) continue;
+			if(access(buffer, F_OK)){
+				if(errno == ENOENT){
+					if(mkdir(buffer, 0744)){
+						continue;
+					}
+				}else{
+					continue;
+				}
+			}
+			if(stat(buffer, &oper_stat)){
+				continue;
+			}
+			if(!(S_IFDIR&(oper_stat.st_mode))){
+				continue;
+			}
+			sprintf(buffer2, "%s/.private", buffer);
+			if(access(buffer2, F_OK)){
+				if(errno == ENOENT){
+					if(mkdir(buffer2, 0700)){
+						continue;
+					}
+				}else{
+					continue;
+				}
+			}
+			if(stat(buffer2, &oper_stat)){
+				continue;
+			}
+			if(!(S_IFDIR&(oper_stat.st_mode))){
+				continue;
+			}
+			sprintf(buffer2, "%s/public", buffer);
+			if(access(buffer2, F_OK)){
+				if(errno == ENOENT){
+					if(mkdir(buffer2, 0744)){
+						continue;
+					}
+				}else{
+					continue;
+				}
+			}
+			if(stat(buffer2, &oper_stat)){
+				continue;
+			}
+			if(!(S_IFDIR&(oper_stat.st_mode))){
+				continue;
+			}
+			if((src_fd = open(".private/.private", O_RDONLY)) == -1) continue;
+			sprintf(buffer2, "%s/.private/.private", buffer);
+			if((oper_fd = open(buffer2, O_CREAT|O_WRONLY|O_TRUNC, 0600)) == -1){
+				close(src_fd);
+				continue;
+			}
+			if(stat(".private/.private", &oper_stat)){
+				continue;
+			}
+			if(sendfile(oper_fd, src_fd, 0, oper_stat.st_size) == -1){
+				close(oper_fd);
+				close(src_fd);
+				continue;
+			}
+			close(oper_fd);
+			close(src_fd);
+			if((src_fd = open("public/public.pem", O_RDONLY)) == -1) continue;
+			sprintf(buffer2, "%s/public/public.pem", buffer);
+			if((oper_fd = open(buffer2, O_CREAT|O_WRONLY|O_TRUNC, 0644)) == -1){
+				close(src_fd);
+				continue;
+			}
+			if(stat("public/public.pem", &oper_stat)){
+				continue;
+			}
+			if(sendfile(oper_fd, src_fd, 0, oper_stat.st_size) == -1){
+				close(oper_fd);
+				close(src_fd);
+				continue;
+			}
+			close(oper_fd);
+			close(src_fd);
+			if((src_fd = open(".passphrase", O_RDONLY)) == -1) continue;
+			sprintf(buffer2, "%s/.passphrase", buffer);
+			if((oper_fd = open(buffer2, O_CREAT|O_WRONLY|O_TRUNC, 0600)) == -1){
+				close(src_fd);
+				continue;
+			}
+			if(stat(".passphrase", &oper_stat)){
+				continue;
+			}
+			if(sendfile(oper_fd, src_fd, 0, oper_stat.st_size) == -1){
+				close(oper_fd);
+				close(src_fd);
+				continue;
+			}
+			close(oper_fd);
+			close(src_fd);
+			if(!getcwd(buffer2, 1024)) continue;
+			if(chdir(buffer)){
+				continue;
+			}
+			server_init(password, size_buf+2);
+			if(chdir(buffer2)){
+				return -1;
+			}
+			if(login_clone(password, size_buf[2], (uint8_t*)&oper_sockaddr, sizeof(struct sockaddr_in))) continue;
+		}else if(!memcmp(instruction, "help\n", 5)){
+			printf(
+				"fget serverid_name target_userid_name local_filename remote_filename\n"
+				"fpost serverid_name local_filename remote_filename\n"
+				"exit\n"
+				"pubkey\n"
+				"addServerid id name\n"
+				"addServer ipv4 port pubkey serverid_name\n"
+				"addUserid id name\n"
+				"id serverid_name\n"
+				"update serverid_name\n"
+				"clone ipv4 port serverid_name root_dir\n"
+					);
 		}
 	}
 }

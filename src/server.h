@@ -28,7 +28,7 @@
 #include "log.h"
 
 void server_err(const char* restrict error_message);
-int server_init(char* restrict passward);
+int server_init(char* restrict passward, uint64_t* server_id);
 int server_start(char* restrict passward, int oper_msg, uint32_t flag);
 int server_getid(uint64_t* id);
 

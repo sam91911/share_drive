@@ -12,7 +12,7 @@ void server_err(const char* restrict error_message){
 	exit(-1);
 }
 
-int server_init(char* restrict password){
+int server_init(char* restrict password, uint64_t* server_id){
 	struct stat oper_stat;
 	int oper_fd;
 	FILE* oper_file;
@@ -20,6 +20,7 @@ int server_init(char* restrict password){
 	uint8_t oper_str[65];
 	uint64_t oper_str_len;
 	uint64_t oper_serverid;
+	char path[256];
 	if((oper_fd = open("config", O_CREAT|O_WRONLY, 0644)) == -1){
 		server_err("open config");
 	}
@@ -34,7 +35,11 @@ int server_init(char* restrict password){
 		server_err("write config");		
 	}
 	oper_file = fdopen(oper_fd, "w");
-	if(RAND_bytes((uint8_t *)&oper_serverid, 8) != 1) server_err("RAND_bytes");
+	if(!server_id){
+		if(RAND_bytes((uint8_t *)&oper_serverid, 8) != 1) server_err("RAND_bytes");
+	}else{
+		oper_serverid = server_id[0];
+	}
 	fprintf(oper_file, "serverid = %016lX\n", oper_serverid);
 	fclose(oper_file);
 	close(oper_fd);
@@ -44,13 +49,19 @@ int server_init(char* restrict password){
 	close(oper_fd);
 	if(log_init()) return -1;
 	if(log_server_init(oper_serverid)) return -1;
-	if(pk_init(password)) return -1;
+	if(!server_id){
+		if(pk_init(password)) return -1;
+	}
 	if(pk_get_pubkey(oper_str, &oper_str_len)) return -1;
 	if(user_init()) server_err("user_init");
 	if(user_server_init(oper_serverid)) server_err("fsys server init");
 	if(user_add(oper_serverid, oper_str, 65)) server_err("user_add");
 	if(signreg_init()) server_err("signreg init");
 	if(fsys_init()) server_err("fsys init");
+	if(serverid_init()) server_err("serverid init");
+	if(sprintf(path, "serverid/%016lX", oper_serverid) < 1) return -1;
+	if((oper_fd = open(path, O_CREAT|O_WRONLY, 0644)) == -1) return -1;
+	close(oper_fd);
 	return 0;
 }
 
