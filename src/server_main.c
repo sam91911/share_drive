@@ -98,6 +98,7 @@ int main(const int argc, char** argv){
 		if(!strcmp(instruction, "init\n")){
 			server_init(password);
 			server_getid(&server_id);
+			continue;
 		}else if(!strcmp(instruction, "start\n")){
 			if(server_pid){
 				if(!kill(server_pid, 0)){
@@ -156,7 +157,6 @@ exit:
 			}
 			if(brk) continue;
 			if(user_add(server_id, buffer, 65)) return -1;
-		}else{
 		}
 	}
 }

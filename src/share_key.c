@@ -38,6 +38,7 @@ int share_key_plug(uint64_t threshold, uint64_t* coef, uint64_t sample_x, uint64
 	for(uint64_t j = 1; j < threshold-1; j++){
 		r_sample_y[0] = GF64_mul(r_sample_y[0]^coef[j], sample_x);
 	}
+	r_sample_y[0] ^= coef[threshold-1];
 	return 0;
 }
 
@@ -51,14 +52,14 @@ int share_key_combinen(uint64_t threshold, uint64_t* sample_x, uint64_t* sample_
 		vector[i] = sample_y[i];
 	}
 	for(uint64_t i = 0; i < threshold; i++){
-		for(uint64_t j = 0; j < threshold; i++){
+		for(uint64_t j = 0; j < threshold; j++){
 			if(i == j) continue;
 			vector[j] = GF64_mul(vector[j], sample_x[i]^support_x);
 		}
 	}
 	uint64_t x;
 	for(uint64_t i = 1; i < threshold; i++){
-		for(uint64_t j = 0; j < i; i++){
+		for(uint64_t j = 0; j < i; j++){
 			x = GF64_inverse(sample_x[i]^sample_x[j]);
 			vector[i] = GF64_mul(vector[i], x);
 			vector[j] = GF64_mul(vector[j], x);

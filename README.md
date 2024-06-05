@@ -9,15 +9,23 @@ It's using the following c library:
 - unistd.h
 - fcntl.h
 - errno.h
-- argp.h
+- signal.h
+- time.h
+- dirent.h
+- termios.h
 - sys/types.h
 - sys/stat.h
 - sys/wait.h
+- sys/msg.h
+- sys/ipc.h
 - sys/select.h
 - sys/socket.h
+- sys/sendfile.h
 - openssl/bn.h
 - openssl/evp.h
 - openssl/pem.h
+- arpa/inet.h
+- netinet/in.h
 
 # the purpose
 It's designed to saving files to separate station.

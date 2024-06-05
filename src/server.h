@@ -25,6 +25,7 @@
 #include "pk.h"
 #include "signreg.h"
 #include "fsys.h"
+#include "log.h"
 
 void server_err(const char* restrict error_message);
 int server_init(char* restrict passward);

@@ -5,4 +5,6 @@
 #define METHOD_SIGNREG 3
 #define METHOD_POST 4
 #define METHOD_GET 5
+#define METHOD_UPDATE 6
+#define METHOD_CLONE 7
 #endif

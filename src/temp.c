@@ -97,25 +97,28 @@ int temp_encode(uint64_t user_id, char* file_name, uint8_t* aes_key, uint8_t* iv
 	if(sprintf(path, ".sign/%s", upname) < 1) return -1;
 	if((oper_fd = open(path, O_CREAT|O_WRONLY|O_EXCL, 0644)) == -1) return -1;
 	size_buf[0] = strlen(upname);
-	*(uint64_t*)(sbuffer + 0) = user_id;
-	*(uint64_t*)(sbuffer + 8) = timen;
-	*(uint64_t*)(sbuffer + 16) = oper_stat.st_size;
-	*(uint64_t*)(sbuffer + 24) = threshold;
-	memcpy(sbuffer+32, hash_v, 32);
+	*(uint16_t*)(sbuffer + 0) = 0;
+	sbuffer[2] = METHOD_POST;
+	sbuffer[3] = 0;
+	*(uint64_t*)(sbuffer + 4) = user_id;
+	*(uint64_t*)(sbuffer + 12) = timen;
+	*(uint64_t*)(sbuffer + 20) = oper_stat.st_size;
+	*(uint64_t*)(sbuffer + 28) = threshold;
+	memcpy(sbuffer+36, hash_v, 32);
 	EVP_DigestInit(md_ctx, EVP_sha3_256());
 	EVP_DigestUpdate(md_ctx, iv, 16);
 	EVP_DigestUpdate(md_ctx, aes_key, 32);
 	EVP_DigestFinal(md_ctx, hash_v, 0);
-	memcpy(sbuffer+64, iv, 16);
-	memcpy(sbuffer+80, hash_v, 32);
+	memcpy(sbuffer+68, iv, 16);
+	memcpy(sbuffer+84, hash_v, 32);
 	size_buf[0] = strlen(upname);
 	if(size_buf[0] > 255) return -1;
-	sbuffer[112] = size_buf[0];
-	memcpy(sbuffer+113, upname, size_buf[0]);
-	size_buf[1] = (2048-113)-size_buf[0];
-	if(pk_sign(sbuffer, 113+size_buf[0], sbuffer+121+size_buf[0], size_buf+1, password) == -1) return -1;
-	memcpy(sbuffer+113+size_buf[0], size_buf+1, 8);
-	if(write(oper_fd, sbuffer, 121+size_buf[0]+size_buf[1]) == -1) return -1;
+	sbuffer[116] = size_buf[0];
+	memcpy(sbuffer+117, upname, size_buf[0]);
+	size_buf[1] = (2048-117)-size_buf[0];
+	if(pk_sign(sbuffer, 117+size_buf[0], sbuffer+125+size_buf[0], size_buf+1, password) == -1) return -1;
+	memcpy(sbuffer+117+size_buf[0], size_buf+1, 8);
+	if(write(oper_fd, sbuffer, 125+size_buf[0]+size_buf[1]) == -1) return -1;
 	close(oper_fd);
 	EVP_CIPHER_CTX_cleanup(ctx);
 	EVP_CIPHER_CTX_free(ctx);
@@ -249,8 +252,8 @@ int temp_decode(char* file_name, uint64_t* secret, uint8_t* iv, uint8_t* check_h
 	EVP_DigestUpdate(md_ctx, aes_key, 32);
 	EVP_DigestFinal(md_ctx, hash_v, 0);
 	EVP_MD_CTX_free(md_ctx);
-	EVP_DecryptInit(ctx, EVP_aes_256_cbc(), aes_key, iv);
 	if(memcmp(hash_v, check_hash, 32)) return -1;
+	EVP_DecryptInit(ctx, EVP_aes_256_cbc(), aes_key, iv);
 	if(pipe(pipefd) == -1) return -3;
 	pipe_flag = fcntl(pipefd[0], F_GETFL, 0);
 	fcntl(pipefd[0], F_SETFL, pipe_flag| O_NONBLOCK);
@@ -259,11 +262,6 @@ int temp_decode(char* file_name, uint64_t* secret, uint8_t* iv, uint8_t* check_h
 	if((oper_fd = open(file_name, O_CREAT|O_WRONLY, 0666)) == -1) return -1;
 	oper_pid = fork();
 	if(oper_pid){
-		close(pipefd[0]);
-		close(oper_fd);
-		if(sep_data_merge(up_fds, pipefd[1], user_ids, threshold)) return -1;
-		close(pipefd[1]);
-	}else{
 		close(pipefd[1]);
 		while(1){
 			rbl = 0;
@@ -309,20 +307,26 @@ int temp_decode(char* file_name, uint64_t* secret, uint8_t* iv, uint8_t* check_h
 		}
 		close(pipefd[0]);
 		close(oper_fd);
-		if(read_bytes == -1){
-			kill(oper_pid, SIGKILL);
+		wait(0);
+	}else{
+		close(pipefd[0]);
+		close(oper_fd);
+		if(sep_data_merge(up_fds, pipefd[1], user_ids, threshold)) exit(-1);
+		close(pipefd[1]);
+		for(i = 0; i < threshold; i++){
+			close(up_fds[i]);
 		}
-		waitpid(oper_pid, 0, 0);
+		exit(0);
 	}
 	for(i = 0; i < threshold; i++){
 		close(up_fds[i]);
 	}
-	EVP_MD_CTX_free(md_ctx);
 	EVP_CIPHER_CTX_cleanup(ctx);
 	EVP_CIPHER_CTX_free(ctx);
 	if(read_bytes == -1){
-		return -1;
+		if(errno != EAGAIN) return -1;
 	}
+	closedir(oper_dir);
 	return 0;
 }
 
@@ -344,6 +348,8 @@ int temp_decode_clean(char* upname){
 	char path[256+256+7];
 	DIR* oper_dir;
 	struct dirent* oper_dirent;
+	if(sprintf(path, ".temp/%s/", upname) < 1) return -1;
+	if(!(oper_dir = opendir(path))) return -1;
 	while(1){
 		if(!(oper_dirent = readdir(oper_dir))) break;
 		if(oper_dirent->d_type != DT_REG) continue;
@@ -352,5 +358,6 @@ int temp_decode_clean(char* upname){
 	}
 	if(sprintf(path, ".temp/%s", upname) < 1) return -1;
 	if(rmdir(path) == -1) return -1;
+	closedir(oper_dir);
 	return 0;
 }

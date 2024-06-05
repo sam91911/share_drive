@@ -100,6 +100,7 @@ int main(int argc, char** argv){
 				return 0;
 			}
 		}else if(!memcmp(instruction, "fpost ", 6)){
+			printf("fpost\n");
 			if(sscanf(instruction+6, "%s", buffer) < 1) continue;
 			size_buf[0] = strlen(buffer)+7;
 			if(serverid_get_id(buffer, size_buf+1)) continue;
@@ -152,6 +153,7 @@ exit:
 				printf("error with addServerid");
 			}
 			if(user_server_init(size_buf[0])) continue;
+			if(log_server_init(size_buf[0])) continue;
 		}else if(!memcmp(instruction, "addServer ", 10)){
 			if(sscanf(instruction+10, "%s", buffer) < 1) continue;
 			memset(&oper_sockaddr, 0, 16);
@@ -195,6 +197,10 @@ exit:
 			if(pk_get_pubkey(buffer2+8, size_buf)) continue;
 			if(!EVP_Digest(buffer2, 8+size_buf[0], buffer, 0, EVP_sha3_256(), 0)) continue;
 			printf("Id:\n%016lX\n", *(uint64_t*)buffer);
+		}else if(!memcmp(instruction, "update ", 7)){
+			if(sscanf(instruction+7, "%s", buffer) < 1) continue;
+			if(serverid_get_id(buffer, size_buf)) continue;
+			if(client_update(password, size_buf[0])) continue;
 		}
 	}
 }

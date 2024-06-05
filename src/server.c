@@ -42,21 +42,8 @@ int server_init(char* restrict password){
 		server_err("open serverlist");
 	}
 	close(oper_fd);
-	if(access("log", F_OK)){
-		if(errno == ENOENT){
-			if(mkdir("log", 0744)){
-				server_err("mkdir log");
-			}
-		}else{
-			server_err("access log");
-		}
-	}
-	if(stat("log", &oper_stat)){
-		server_err("stat log");
-	}
-	if(!(S_IFDIR&(oper_stat.st_mode))){
-		server_err("log is not s dir");
-	}
+	if(log_init()) return -1;
+	if(log_server_init(oper_serverid)) return -1;
 	if(pk_init(password)) return -1;
 	if(pk_get_pubkey(oper_str, &oper_str_len)) return -1;
 	if(user_init()) server_err("user_init");
@@ -204,7 +191,7 @@ int server_start(char* restrict password, int oper_msg, uint32_t flag){
 				shutdown(client_sock, SHUT_RDWR);
 				return 0;
 			}
-			if(server_process(server_id, client_sock, client_sockaddr, socket_buffer_size, client_id, password, secret) != 1){
+			if(server_process(server_id, client_sock, client_sockaddr, socket_buffer_size, client_id, password, secret)){
 				shutdown(client_sock, SHUT_RDWR);
 				return 0;
 			}

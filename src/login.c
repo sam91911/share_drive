@@ -19,7 +19,7 @@ int server_login(uint64_t server_id, int sock, struct sockaddr_in addr, uint64_t
 	EVP_MD_CTX* md_ctx;
 	if(!(md_ctx = EVP_MD_CTX_new())) return -1;
 	EVP_DigestInit(md_ctx, EVP_sha3_256());
-	if((read_bytes = recv(sock, buffer, buffer_size, 0)) == -1) return -3;
+	if((read_bytes = recv(sock, buffer, 20, MSG_WAITALL)) == -1) return -3;
 	if(read_bytes < 12) return -1;
 	uint8_t method;
 	uint8_t pack_id;
@@ -48,7 +48,7 @@ int server_login(uint64_t server_id, int sock, struct sockaddr_in addr, uint64_t
 			(*(int64_t*)(sbuffer+36)) = (*(int64_t*)(sbuffer+28)) + LOGIN_REPLY_TIME;
 			if(RAND_bytes(sbuffer+44, 16) != 1) return -3;
 			if(send(sock, sbuffer, 60, 0) == -1) return -3;
-			if((read_bytes = recv(sock, buffer, buffer_size, 0)) == -1) return -3;
+			if((read_bytes = recv(sock, buffer, 44, MSG_WAITALL)) == -1) return -3;
 			if(read_bytes < 44) return -1;
 			if(*(uint16_t*)(buffer+0) != 0) return -1;
 			if(*(uint8_t*)(buffer+2) != METHOD_LOGIN) return -1;
@@ -57,8 +57,10 @@ int server_login(uint64_t server_id, int sock, struct sockaddr_in addr, uint64_t
 			if(*(uint64_t*)(buffer+12) != user_id) return -1;
 			memcpy(size_buf, buffer+20, 8);
 			oper_str_len = 65;
+			if((read_bytes = recv(sock, buffer+44, size_buf[0], MSG_WAITALL)) == -1) return -3;
 			if(user_pubkey(server_id, user_id, oper_str)) return -1;
 			if(pk_verify(oper_str, 65, sbuffer, 60, buffer+44, size_buf[0]) != 1) return -1;
+			EVP_DigestInit(md_ctx, EVP_sha3_256());
 			EVP_DigestUpdate(md_ctx, buffer, 44+size_buf[0]);
 			(*(uint8_t*)(sbuffer+3)) = 3;
 			(*(uint64_t*)(sbuffer+20)) = 996;
@@ -114,7 +116,7 @@ int client_login(uint64_t server_id, int sock, uint64_t buffer_size, char* restr
 	if(!EVP_Digest(oper_str, oper_str_len+8, sbuffer+12, 0, EVP_sha3_256(), 0)) return -1;
 	self_id = *(uint64_t*)(sbuffer+12);
 	if(send(sock, sbuffer, 20, 0) == -1) return -3;
-	if((read_bytes = recv(sock, buffer, buffer_size, 0)) == -1) return -3;
+	if((read_bytes = recv(sock, buffer, 60, MSG_WAITALL)) == -1) return -3;
 	if(read_bytes < 60) return -1;
 	if(*((uint16_t*) buffer) != 0) return -1;
 	if(buffer[2] != METHOD_LOGIN) return -1;
@@ -131,7 +133,7 @@ int client_login(uint64_t server_id, int sock, uint64_t buffer_size, char* restr
 	if(pk_sign(buffer, 60, sbuffer+44, (uint64_t*)(sbuffer+20), password)) return -1;
 	EVP_DigestUpdate(md_ctx, sbuffer, 44+(*(uint64_t*)(sbuffer+20)));
 	if(send(sock, sbuffer, 44+(*(uint64_t*)(sbuffer+20)), 0) == -1) return -1;
-	if((read_bytes = recv(sock, buffer, buffer_size, 0)) == -1) return -3;
+	if((read_bytes = recv(sock, buffer, 28, MSG_WAITALL)) == -1) return -3;
 	if(read_bytes < 28) return -1;
 	if(*(uint16_t*)(buffer+0) != 0) return -1;
 	if(*(uint8_t*)(buffer+2) != METHOD_LOGIN) return -1;
@@ -139,6 +141,7 @@ int client_login(uint64_t server_id, int sock, uint64_t buffer_size, char* restr
 	if(*(uint64_t*)(buffer+4) != server_id) return -1;
 	if(*(uint64_t*)(buffer+12) != remote_id) return -1;
 	memcpy(size_buf, buffer+20, 8);
+	if((read_bytes = recv(sock, buffer+28, size_buf[0], MSG_WAITALL)) == -1) return -3;
 	if(pk_verify(server_pubkey, pubkey_len, sbuffer, 44, buffer+28, size_buf[0]) != 1) return -1;
 	EVP_DigestUpdate(md_ctx, buffer, 28+size_buf[0]);
 	EVP_DigestFinal(md_ctx, secret, 0);

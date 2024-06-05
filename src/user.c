@@ -88,7 +88,6 @@ int user_add(uint64_t serverid, uint8_t* restrict pubkey, uint64_t len){
 }
 int user_init(){
 	struct stat oper_stat;
-	int oper_fd;
 	if(access("user", F_OK)){
 		if(errno == ENOENT){
 			if(mkdir("user", 0744)){
@@ -104,7 +103,6 @@ int user_init(){
 	if(!(S_IFDIR&(oper_stat.st_mode))){
 		return -1;
 	}
-	close(oper_fd);
 	return 0;
 }
 int user_server_init(uint64_t serverid){

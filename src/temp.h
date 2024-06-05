@@ -17,6 +17,7 @@
 #include "share_key.h"
 #include "sep_data.h"
 #include "pk.h"
+#include "method.h"
 
 
 int temp_init();
