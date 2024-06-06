@@ -107,7 +107,7 @@ int server_process(uint64_t server_id, int sock, struct sockaddr_in addr, uint64
 			if(memcmp(buffer+12, hash_v, 32)) return -1;
 			memcpy(oper_str, buffer+53, slen);
 			oper_str[slen] = '\0';
-			if((oper_fd = fsys_get(client_id, oper_str)) == -1) return -3;
+			if((oper_fd = fsys_get(call_id, oper_str)) == -1) return -3;
 			pack_id = 0;
 			while(1){
 				if((read_bytes = read(oper_fd, sbuffer+56, 1024)) != 1024){
