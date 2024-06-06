@@ -33,8 +33,7 @@ int client_init(char* restrict password){
 	return 0;
 }
 
-int client_fpost(char* restrict password, uint64_t server_id, char* restrict file_name, char* upname){
-	uint64_t threshold = 2;
+int client_fpost(char* restrict password, uint64_t server_id, char* restrict file_name, char* upname, uint64_t threshold){
 	struct stat oper_stat;
 	int file_fd;
 	if(access(file_name, F_OK|R_OK)) client_err("access file_name");

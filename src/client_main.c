@@ -102,13 +102,14 @@ int main(int argc, char** argv){
 				return 0;
 			}
 		}else if(!memcmp(instruction, "fpost ", 6)){
-			printf("fpost\n");
 			if(sscanf(instruction+6, "%s", buffer) < 1) continue;
 			size_buf[0] = strlen(buffer)+7;
 			if(serverid_get_id(buffer, size_buf+1)) continue;
 			if(sscanf(instruction+size_buf[0], "%s", buffer) < 1) continue;
 			size_buf[0] += strlen(buffer)+1;
 			if(sscanf(instruction+size_buf[0], "%s", buffer2) < 1) continue;
+			size_buf[0] += strlen(buffer2)+1;
+			if(sscanf(instruction+size_buf[0], "%lu", size_buf+2) < 1) continue;
 			if(client_pid){
 				if(!kill(client_pid, 0)){
 					if(!waitpid(client_pid, &pid_state, WNOHANG)){
@@ -126,7 +127,7 @@ int main(int argc, char** argv){
 			if(client_pid){
 				continue;
 			}else{
-				client_fpost(password, size_buf[1], buffer, buffer2);
+				client_fpost(password, size_buf[1], buffer, buffer2, size_buf[2]);
 				return 0;
 			}
 		}else if(!strcmp(instruction, "exit\n")){
@@ -326,7 +327,7 @@ exit:
 		}else if(!memcmp(instruction, "help\n", 5)){
 			printf(
 				"fget serverid_name target_userid_name local_filename remote_filename\n"
-				"fpost serverid_name local_filename remote_filename\n"
+				"fpost serverid_name local_filename remote_filename threshold\n"
 				"exit\n"
 				"pubkey\n"
 				"addServerid id name\n"
