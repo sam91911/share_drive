@@ -29,7 +29,7 @@
 
 void client_err(const char* restrict error_message);
 int client_init(char* restrict passward);
-int client_fpost(char* restrict passward, uint64_t server_id, char* restrict file_name, char* upname);
+int client_fpost(char* restrict passward, uint64_t server_id, char* restrict file_name, char* upname, uint64_t threshold);
 int client_fget(char* restrict password, uint64_t server_id, uint64_t call_id, char* restrict file_name, char* upname);
 int client_update(char* restrict password, uint64_t server_id);
 
